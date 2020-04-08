@@ -38,60 +38,96 @@ void fillBox(std::vector<int>& puzzle, int boxNum){
 std::vector<int> generatePuzzle(bool basic){
     std::vector<int> puzzle(N*N, -1);
     if(basic){
-        // This isn't super elegant, but we can use it for the time being
-        // to have a basic puzzle to test for consistancy, instead of random ones each time.
-        //  =====================
-        // ||3|*|*||*|*|9||1|7|8||
-        // ||*|*|6||1|5|*||9|4|*||
-        // ||*|9|1||3|*|*||6|5|*||
-        //  =====================
-        // ||9|*|*||*|*|5||*|2|*||
-        // ||6|*|*||2|4|*||5|*|*||
-        // ||*|*|4||*|*|*||3|*|*||
-        //  =====================
-        // ||*|7|*||*|8|6||2|*|*||
-        // ||1|6|*||4|*|7||8|9|*||
-        // ||5|*|*||*|*|2||4|*|7||
-        //  =====================
-        puzzle[0] = 3;
-        puzzle[5] = 9;
-        puzzle[6] = 1;
-        puzzle[7] = 7;
-        puzzle[8] = 8;
-        puzzle[11] = 6;
-        puzzle[12] = 1;
-        puzzle[13] = 5;
-        puzzle[15] = 9;
-        puzzle[16] = 4;
-        puzzle[19] = 9;
-        puzzle[20] = 1;
-        puzzle[21] = 3;
-        puzzle[24] = 6;
-        puzzle[25] = 5;
-        puzzle[27] = 9;
-        puzzle[32] = 5;
-        puzzle[34] = 2;
-        puzzle[36] = 6;
-        puzzle[39] = 2;
-        puzzle[40] = 4;
-        puzzle[42] = 5;
-        puzzle[47] = 4;
-        puzzle[51] = 3;
-        puzzle[51] = 3;
-        puzzle[55] = 7;
-        puzzle[58] = 8;
-        puzzle[59] = 6;
-        puzzle[60] = 2;
-        puzzle[63] = 1;
-        puzzle[64] = 6;
-        puzzle[66] = 4;
-        puzzle[68] = 7;
-        puzzle[69] = 8;
-        puzzle[70] = 9;
-        puzzle[72] = 5;
-        puzzle[77] = 2;
-        puzzle[78] = 4;
-        puzzle[80] = 7;
+        bool useEasy = true;
+        if(useEasy) {
+            // This isn't super elegant, but we can use it for the time being
+            // to have a basic puzzle to test for consistancy, instead of random ones each time.
+            //  =====================
+            // ||3|*|*||*|*|9||1|7|8||
+            // ||*|*|6||1|5|*||9|4|*||
+            // ||*|9|1||3|*|*||6|5|*||
+            //  =====================
+            // ||9|*|*||*|*|5||*|2|*||
+            // ||6|*|*||2|4|*||5|*|*||
+            // ||*|*|4||*|*|*||3|*|*||
+            //  =====================
+            // ||*|7|*||*|8|6||2|*|*||
+            // ||1|6|*||4|*|7||8|9|*||
+            // ||5|*|*||*|*|2||4|*|7||
+            //  =====================
+            puzzle[0] = 3;
+            puzzle[5] = 9;
+            puzzle[6] = 1;
+            puzzle[7] = 7;
+            puzzle[8] = 8;
+            puzzle[11] = 6;
+            puzzle[12] = 1;
+            puzzle[13] = 5;
+            puzzle[15] = 9;
+            puzzle[16] = 4;
+            puzzle[19] = 9;
+            puzzle[20] = 1;
+            puzzle[21] = 3;
+            puzzle[24] = 6;
+            puzzle[25] = 5;
+            puzzle[27] = 9;
+            puzzle[32] = 5;
+            puzzle[34] = 2;
+            puzzle[36] = 6;
+            puzzle[39] = 2;
+            puzzle[40] = 4;
+            puzzle[42] = 5;
+            puzzle[47] = 4;
+            puzzle[51] = 3;
+            puzzle[51] = 3;
+            puzzle[55] = 7;
+            puzzle[58] = 8;
+            puzzle[59] = 6;
+            puzzle[60] = 2;
+            puzzle[63] = 1;
+            puzzle[64] = 6;
+            puzzle[66] = 4;
+            puzzle[68] = 7;
+            puzzle[69] = 8;
+            puzzle[70] = 9;
+            puzzle[72] = 5;
+            puzzle[77] = 2;
+            puzzle[78] = 4;
+            puzzle[80] = 7;
+
+        } else {
+            //A more complicated puzzle - this one took my computer about 15 minutes to solve
+            //  =====================
+            // ||*|*|*||*|*|8||*|*|*||
+            // ||*|*|7||*|*|*||*|*|5||
+            // ||*|*|*||3|*|*||*|*|7||
+            //  =====================
+            // ||*|*|*||*|1|*||6|*|*||
+            // ||*|*|3||7|*|*||*|*|*||
+            // ||*|2|*||*|*|*||*|8|*||
+            //  =====================
+            // ||*|*|*||5|*|*||*|4|3||
+            // ||8|6|*||*|*|*||*|*|9||
+            // ||*|*|*||*|*|*||*|*|*||
+            //  =====================
+            puzzle[5] = 8;
+            puzzle[11] = 7;
+            puzzle[17] = 5;
+            puzzle[21] = 3;
+            puzzle[26] = 7;
+            puzzle[31] = 1;
+            puzzle[33] = 6;
+            puzzle[38] = 3;
+            puzzle[39] = 7;
+            puzzle[46] = 2;
+            puzzle[52] = 8;
+            puzzle[57] = 5;
+            puzzle[61] = 4;
+            puzzle[62] = 3;
+            puzzle[63] = 8;
+            puzzle[64] = 6;
+            puzzle[71] = 9;
+        }
     }else
     {
         int diagonalSeed = sqrt(N)+1;
@@ -163,6 +199,7 @@ bool isValid(std::vector<int> puzzle){
             }
         }
     }
+    //std::cout << i << " was " << j << std::endl;
     return true;
 }
 
