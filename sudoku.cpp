@@ -3,11 +3,12 @@
 #include <mpi.h>
 #include <math.h>
 #include <vector>
+#include <iomanip>
 
 #define MCW MPI_COMM_WORLD
 
-#define N 9
-#define box 3
+#define N 16
+#define box 4
 
 void fillBox(std::vector<int>& puzzle);
 std::vector<int> generatePuzzle(bool basic);
@@ -203,8 +204,19 @@ bool isValid(std::vector<int> puzzle){
     return true;
 }
 
+int getWidth(int n){
+    if (n < 10)
+        return 1;
+    if(n < 100)
+        return 2;
+    if(n < 1000)
+        return 3;
+    return 0;
+}
 void printPuzzle(std::vector<int> puzzle){
+    int w = getWidth(N);
     int rowLength = N*2+box+(N-9);
+
     bool overNine = (N-9);
     
     std::cout<<" "<<std::string(rowLength, '=')<<std::endl;
@@ -213,8 +225,8 @@ void printPuzzle(std::vector<int> puzzle){
             for(int k=0;k<box;++k){
                 std::cout<<"|";
                 for(int l=0;l<box;++l){
-                    if(puzzle[i]==-1) std::cout<<"|*";
-                    else std::cout<<((overNine&&puzzle[i]<9) ? "| " : "|")<<puzzle[i];
+                    if(puzzle[i]==-1) std::cout<<"|" << std::setw(w) << "*";
+                    else std::cout<< "|" << std::setw(w) << puzzle[i];
                     ++i;
                 }
             }
@@ -282,13 +294,13 @@ int main(int argc, char **argv){
     srand(rank+time(0));
 
     if(rank==0){
-        puzzle = generatePuzzle(true);
+        puzzle = generatePuzzle(false);
         printPuzzle(puzzle);
 
         if(!isValid(puzzle)){
             printf("Invalid puzzle\n");
         } else printf("Seems valid\n");
-        solvePuzzle(puzzle);
+        //solvePuzzle(puzzle);
     }
 
     MPI_Finalize();
