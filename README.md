@@ -11,4 +11,5 @@ This program can generate a sudoku puzzle and solve it in parallel. It can gener
 ### Run:
 
 `mpirun -n 4 ./a.out`
-Where 4 is the number of processors your cpu has.
+
+*Where 4 is the number of processors your cpu has.*
