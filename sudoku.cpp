@@ -3,6 +3,7 @@
 #include <mpi.h>
 #include <math.h>
 #include <vector>
+#include <random>
 
 #define MCW MPI_COMM_WORLD
 
@@ -16,7 +17,7 @@ int getColumn(int puzzleIndex);
 int getRow(int puzzleIndex);
 bool isValid(std::vector<int> puzzle);
 void printPuzzle(std::vector<int> puzzle);
-void solvePuzzle(std::vector<int> puzzle);
+void solvePuzzle(std::vector<int>& puzzle);
 
 void fillBox(std::vector<int>& puzzle, int boxNum){
     std::vector<int> values;
@@ -24,11 +25,13 @@ void fillBox(std::vector<int>& puzzle, int boxNum){
         values.push_back(i);
     }
 
-    std::random_shuffle(values.begin(), values.end());
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(values.begin(), values.end(), g);
     int i=0;
     while(!values.empty()){
         if(getBox(i)==boxNum){
-            puzzle[i]=values.back();
+            puzzle[i]=values.back()+1;
             values.pop_back();
         }
         ++i;
@@ -37,8 +40,9 @@ void fillBox(std::vector<int>& puzzle, int boxNum){
 
 std::vector<int> generatePuzzle(bool basic){
     std::vector<int> puzzle(N*N, -1);
+    srand (time(NULL));
     if(basic){
-        bool useEasy = true;
+        bool useEasy = false;
         if(useEasy) {
             // This isn't super elegant, but we can use it for the time being
             // to have a basic puzzle to test for consistancy, instead of random ones each time.
@@ -134,6 +138,13 @@ std::vector<int> generatePuzzle(bool basic){
         for(int i=0;i<N;++i){
             if(i%diagonalSeed==0) fillBox(puzzle, i);
         }
+
+        solvePuzzle(puzzle);
+        int removeAmount = rand() % 27+17;
+        while(removeAmount>0){
+            int removeNum= rand() % 80;
+            if(puzzle[removeNum]>0)
+        }
     }
 
     return puzzle;
@@ -225,7 +236,7 @@ void printPuzzle(std::vector<int> puzzle){
 }
 
 //I'll give this a return value when it's closer to finished
-void solvePuzzle(std::vector<int> puzzle){
+void solvePuzzle(std::vector<int>& puzzle){
     std::vector<int> queue;
     int start = 0;
     while(puzzle[start] != -1){
@@ -273,7 +284,7 @@ void solvePuzzle(std::vector<int> puzzle){
 
 int main(int argc, char **argv){
     int rank, size, data;
-    std::vector<int> puzzle;
+    std::vector<int> puzzle, puzzle2;
     
 
     MPI_Init(&argc, &argv);
@@ -282,13 +293,16 @@ int main(int argc, char **argv){
     srand(rank+time(0));
 
     if(rank==0){
-        puzzle = generatePuzzle(true);
-        printPuzzle(puzzle);
+        // puzzle = generatePuzzle(true);
+        // printPuzzle(puzzle);
 
-        if(!isValid(puzzle)){
-            printf("Invalid puzzle\n");
-        } else printf("Seems valid\n");
-        solvePuzzle(puzzle);
+        // if(!isValid(puzzle)){
+        //     printf("Invalid puzzle\n");
+        // } else printf("Seems valid\n");
+        // solvePuzzle(puzzle);
+
+        puzzle2 = generatePuzzle(false);
+        printPuzzle(puzzle2);
     }
 
     MPI_Finalize();
