@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <iostream>
 #include <mpi.h>
+#include <math.h>
 #include <vector>
 
 #define MCW MPI_COMM_WORLD
@@ -14,9 +16,23 @@ int getColumn(int puzzleIndex);
 int getRow(int puzzleIndex);
 bool isValid(std::vector<int> puzzle);
 void printPuzzle(std::vector<int> puzzle);
+void solvePuzzle(std::vector<int> puzzle);
 
 void fillBox(std::vector<int>& puzzle, int boxNum){
-    
+    std::vector<int> values;
+    for(int i=0;i<N;++i){
+        values.push_back(i);
+    }
+
+    std::random_shuffle(values.begin(), values.end());
+    int i=0;
+    while(!values.empty()){
+        if(getBox(i)==boxNum){
+            puzzle[i]=values.back();
+            values.pop_back();
+        }
+        ++i;
+    }
 }
 
 std::vector<int> generatePuzzle(bool basic){
@@ -78,7 +94,10 @@ std::vector<int> generatePuzzle(bool basic){
         puzzle[80] = 7;
     }else
     {
-        
+        int diagonalSeed = sqrt(N)+1;
+        for(int i=0;i<N;++i){
+            if(i%diagonalSeed==0) fillBox(puzzle, i);
+        }
     }
 
     return puzzle;
@@ -143,21 +162,52 @@ bool isValid(std::vector<int> puzzle){
 }
 
 void printPuzzle(std::vector<int> puzzle){
-    std::cout<<" ====================="<<std::endl;
+    int rowLength = N*2+box+(N-9);
+    bool overNine = (N-9);
+    
+    std::cout<<" "<<std::string(rowLength, '=')<<std::endl;
     for(int i=0;i<puzzle.size();){
         for(int j=0;j<box;++j){
             for(int k=0;k<box;++k){
                 std::cout<<"|";
                 for(int l=0;l<box;++l){
                     if(puzzle[i]==-1) std::cout<<"|*";
-                    else std::cout<<"|"<<puzzle[i];
+                    else std::cout<<((overNine&&puzzle[i]<9) ? "| " : "|")<<puzzle[i];
                     ++i;
                 }
             }
             std::cout<<"||"<<std::endl;
         }
-        std::cout<<" ====================="<<std::endl;
+        std::cout<<" "<<std::string(rowLength, '=')<<std::endl;
     }
+}
+
+//I'll give this a return value when it's closer to finished
+void solvePuzzle(std::vector<int> puzzle){
+    std::vector<int> queue;
+    int start = 0;
+    while(puzzle[start] != -1){
+        ++start;
+    }
+    queue.push_back(start);
+    int curr = start;
+    while(curr < N*N){
+        for(int i = 1; i < N; ++i){
+            puzzle[queue.back()] = i;
+            if(isValid(puzzle)){
+                break;
+            }
+        }
+        int i = 1;
+        while (i <= N){
+            
+        }
+        do {
+            curr++;
+        } while (puzzle[curr] != -1);
+        queue.push_back(curr);
+    }
+    
 }
 
 int main(int argc, char **argv){
@@ -171,11 +221,11 @@ int main(int argc, char **argv){
     srand(rank+time(0));
 
     if(rank==0){
-        puzzle = generatePuzzle(true);
+        puzzle = generatePuzzle(false);
         printPuzzle(puzzle);
 
         if(!isValid(puzzle)){
-            printf("Something's probably wrong with isValid\n");
+            printf("Invalid puzzle\n");
         } else printf("Seems valid\n");
     }
 
