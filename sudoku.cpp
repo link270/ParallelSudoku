@@ -240,7 +240,7 @@ int main(int argc, char **argv){
         if(!isValid(puzzle)){
             printf("Invalid puzzle\n");
         } else printf("Seems valid\n");
-        solvePuzzle(puzzle);
+        //solvePuzzle(puzzle);
     }
 
     MPI_Finalize();
