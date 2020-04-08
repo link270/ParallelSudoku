@@ -131,19 +131,21 @@ bool isValid(std::vector<int> puzzle){
         //Row is all indices in [Nx(i/3), +N]
         //Values in row are found by adding 1, modulus N, then adding to get back to the correct row if necessary
         int row = getRow(i);
-        for(int j = i+1; j != i; j = ((++j) % N) + (N*row)){
+        for(int j = (i+1) % N + (N*row); j != i; j = ((++j) % N) + (N*row)){
             if(puzzle[j] == -1)
                 continue;
-            if(puzzle[i] == puzzle[j])
+            if(puzzle[i] == puzzle[j]){
                 return false;
+            }
         }
         
         //Values in column are found by adding/subtracting N
         for(int j = i + N; j != i; j=(j+N) % ( N*N )){
             if(puzzle[j] == -1)
                 continue;
-            if(puzzle[i] == puzzle[j])
+            if(puzzle[i] == puzzle[j]){
                 return false;
+            }
         }
         
         //Values in box are found by finding the minimum and maxiumum possible index that could share a box, and iterating from there.
@@ -155,8 +157,9 @@ bool isValid(std::vector<int> puzzle){
         for(int j = start; j < end; ++j){
             int jBox = getBox(j);
             if(j != i && puzzle[j] != -1 && jBox == currBox){
-                if(puzzle[i] == puzzle[j])
+                if(puzzle[i] == puzzle[j]){
                     return false;
+                }
             }
         }
     }
@@ -196,13 +199,21 @@ void solvePuzzle(std::vector<int> puzzle){
     while(queue.back() < N*N){
         int i = 1;
         while (1){
+            if(queue.size() == 0) break;
             puzzle[queue.back()] = i;
-            ++i;
+            //if(queue.back() == 62){
+                //printPuzzle(puzzle);
+                //std::cout << "Puzzle is " << ((isValid(puzzle)) ? "valid" : "invalid") << std::endl;
+            //}
             if(!isValid(puzzle)){
-                while(i >= N){
+                ++i;
+                while(i > N){
                     puzzle[queue.back()] = -1;
+
                     queue.pop_back();
-                    i = puzzle[queue.back()] + 1;
+                    if(queue.size() > 0)
+                        i = puzzle[queue.back()] + 1;
+                    else break;
                 }
             } else {
                 break;
@@ -240,7 +251,7 @@ int main(int argc, char **argv){
         if(!isValid(puzzle)){
             printf("Invalid puzzle\n");
         } else printf("Seems valid\n");
-        //solvePuzzle(puzzle);
+        solvePuzzle(puzzle);
     }
 
     MPI_Finalize();
