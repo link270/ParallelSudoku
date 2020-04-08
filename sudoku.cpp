@@ -103,6 +103,8 @@ std::vector<int> generatePuzzle(bool basic){
     return puzzle;
 }
 
+// Gives the box number of the puzzle index.
+// Box numbers increase from 
 int getBox(int puzzleIndex){
     return (puzzleIndex % N) / box + box * (puzzleIndex / (N*box));
 }
@@ -190,23 +192,34 @@ void solvePuzzle(std::vector<int> puzzle){
         ++start;
     }
     queue.push_back(start);
-    int curr = start;
-    while(curr < N*N){
-        for(int i = 1; i < N; ++i){
+    int curr = queue.back();
+    while(queue.back() < N*N){
+        int i = 1;
+        while (1){
             puzzle[queue.back()] = i;
-            if(isValid(puzzle)){
+            ++i;
+            if(!isValid(puzzle)){
+                while(i >= N){
+                    puzzle[queue.back()] = -1;
+                    queue.pop_back();
+                    i = puzzle[queue.back()] + 1;
+                }
+            } else {
                 break;
             }
         }
-        int i = 1;
-        while (i <= N){
-            
-        }
+
+        if(queue.size() > 0)
+            curr = queue.back();
+        else break;
         do {
             curr++;
-        } while (puzzle[curr] != -1);
+        } while (curr < N*N && puzzle[curr] != -1);
         queue.push_back(curr);
     }
+
+    printPuzzle(puzzle);
+    std::cout << "Puzzle is " << ((isValid(puzzle)) ? "valid" : "invalid") << std::endl;
     
 }
 
@@ -221,12 +234,13 @@ int main(int argc, char **argv){
     srand(rank+time(0));
 
     if(rank==0){
-        puzzle = generatePuzzle(false);
+        puzzle = generatePuzzle(true);
         printPuzzle(puzzle);
 
         if(!isValid(puzzle)){
             printf("Invalid puzzle\n");
         } else printf("Seems valid\n");
+        solvePuzzle(puzzle);
     }
 
     MPI_Finalize();
