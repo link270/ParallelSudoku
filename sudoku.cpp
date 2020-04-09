@@ -44,7 +44,7 @@ void fillBox(std::vector<int>& puzzle, int boxNum){
 std::vector<int> generatePuzzle(bool basic, int startingNum = 15){
     std::vector<int> puzzle(N*N, -1);
     if(basic){
-        bool useEasy = true;
+        bool useEasy = false;
         if(useEasy) {
             // This isn't super elegant, but we can use it for the time being
             // to have a basic puzzle to test for consistancy, instead of random ones each time.
@@ -176,46 +176,53 @@ int getRow(int puzzleIndex){
     return puzzleIndex/N;
 }
 
+bool isIndexValid(std::vector<int> &puzzle, int i){
+    //Row is all indices in [Nx(i/3), +N]
+    //Values in row are found by adding 1, modulus N, then adding to get back to the correct row if necessary
+    int row = getRow(i);
+    for(int j = (i+1) % N + (N*row); j != i; j = ((++j) % N) + (N*row)){
+        if(puzzle[j] == -1)
+            continue;
+        if(puzzle[i] == puzzle[j]){
+            return false;
+        }
+    }
+    
+    //Values in column are found by adding/subtracting N
+    for(int j = (i + N) % (N*N); j != i; j=(j+N) % ( N*N )){
+        if(puzzle[j] == -1)
+            continue;
+        if(puzzle[i] == puzzle[j]){
+            return false;
+        }
+    }
+    
+    //Values in box are found by finding the minimum and maxiumum possible index that could share a box, and iterating from there.
+    int currBox = getBox(i);
+    int start = i - (N*box) - box;
+    start = (start < 0) ? 0 : start;
+    int end = i + (N*box) + box;
+    end = (end < N*N) ? end : N*N;
+    for(int j = start; j < end; ++j){
+        int jBox = getBox(j);
+        if(j != i && puzzle[j] != -1 && jBox == currBox){
+            if(puzzle[i] == puzzle[j]){
+                return false;
+            }
+        }
+    }
+    return true;
+}
 
 bool isValid(std::vector<int> puzzle){
     //iterate over all values
     for(int i = 0; i < N*N; ++i){
         //cell not filled, move onto the next one
-        if(puzzle[i] == -1)
+        if(puzzle[i] == -1){
             continue;
-        //Row is all indices in [Nx(i/3), +N]
-        //Values in row are found by adding 1, modulus N, then adding to get back to the correct row if necessary
-        int row = getRow(i);
-        for(int j = (i+1) % N + (N*row); j != i; j = ((++j) % N) + (N*row)){
-            if(puzzle[j] == -1)
-                continue;
-            if(puzzle[i] == puzzle[j]){
-                return false;
-            }
         }
-        
-        //Values in column are found by adding/subtracting N
-        for(int j = (i + N) % (N*N); j != i; j=(j+N) % ( N*N )){
-            if(puzzle[j] == -1)
-                continue;
-            if(puzzle[i] == puzzle[j]){
-                return false;
-            }
-        }
-        
-        //Values in box are found by finding the minimum and maxiumum possible index that could share a box, and iterating from there.
-        int currBox = getBox(i);
-        int start = i - (N*box) - box;
-        start = (start < 0) ? 0 : start;
-        int end = i + (N*box) + box;
-        end = (end < N*N) ? end : N*N;
-        for(int j = start; j < end; ++j){
-            int jBox = getBox(j);
-            if(j != i && puzzle[j] != -1 && jBox == currBox){
-                if(puzzle[i] == puzzle[j]){
-                    return false;
-                }
-            }
+        if(!isIndexValid(puzzle, i)){
+            return false;
         }
     }
     //std::cout << i << " was " << j << std::endl;
@@ -272,7 +279,7 @@ void solvePuzzle(std::vector<int>& puzzle){
                 //printPuzzle(puzzle);
                 //std::cout << "Puzzle is " << ((isValid(puzzle)) ? "valid" : "invalid") << std::endl;
             //}
-            if(!isValid(puzzle)){
+            if(!isIndexValid(puzzle, queue.back())){
                 ++i;
                 while(i > N){
                     puzzle[queue.back()] = -1;
@@ -301,52 +308,6 @@ void solvePuzzle(std::vector<int>& puzzle){
     
 }
 
-bool whyValid(std::vector<int> puzzle){
-    //iterate over all values
-    for(int i = 0; i < N*N; ++i){
-        //cell not filled, move onto the next one
-        if(puzzle[i] == -1)
-            continue;
-        //Row is all indices in [Nx(i/3), +N]
-        //Values in row are found by adding 1, modulus N, then adding to get back to the correct row if necessary
-        int row = getRow(i);
-        for(int j = (i+1) % N + (N*row); j != i; j = ((++j) % N) + (N*row)){
-            if(puzzle[j] == -1)
-                continue;
-            if(puzzle[i] == puzzle[j]){
-                return false;
-            }
-        }
-        
-        //Values in column are found by adding/subtracting N
-        for(int j = (i + N) % (N*N); j != i; j=(j+N) % ( N*N )){
-            if(puzzle[j] == -1)
-                continue;
-            if(puzzle[i] == puzzle[j]){
-                    std::cout << i << " was " << j << std::endl;
-                    std::cout << puzzle[i] << " : " << puzzle[j] << std::endl;
-                    printPuzzle(puzzle);
-                return false;
-            }
-        }
-        
-        //Values in box are found by finding the minimum and maxiumum possible index that could share a box, and iterating from there.
-        int currBox = getBox(i);
-        int start = i - (N*box) - box;
-        start = (start < 0) ? 0 : start;
-        int end = i + (N*box) + box;
-        end = (end < N*N) ? end : N*N;
-        for(int j = start; j < end; ++j){
-            int jBox = getBox(j);
-            if(j != i && puzzle[j] != -1 && jBox == currBox){
-                if(puzzle[i] == puzzle[j]){
-                    return false;
-                }
-            }
-        }
-    }
-    return true;
-}
 void generateQueue(std::vector<std::vector<int>> &queue, std::vector<int> puzzle){
     queue.push_back(puzzle);
     std::vector<int> currPuzzle;
@@ -411,6 +372,7 @@ int main(int argc, char **argv){
 
 
     if(rank==0){
+        /*
         std::vector<std::vector<int>> queue;
         puzzle = generatePuzzle(false, 17);
         generateQueue(queue, puzzle);
@@ -429,19 +391,20 @@ int main(int argc, char **argv){
             }
             currIndex += quantity;
         }
+        */
         
 
 
         //std::cout << queue.size() << std::endl;
 
-        /*
         puzzle = generatePuzzle(true);
         printPuzzle(puzzle);
 
         if(!isValid(puzzle)){
             printf("Invalid puzzle\n");
         } else printf("Seems valid\n");
-        //solvePuzzle(puzzle);
+        solvePuzzle(puzzle);
+        /*
 
         MPI_Send(puzzle.data(), puzzle.size(), MPI_INT, 1, 0, MCW);
         std::cout << "Communication complete" << std::endl;
@@ -455,35 +418,46 @@ int main(int argc, char **argv){
     } else {
         std::vector<std::vector<int>> queue;
 
+        /*
         MPI_Status status;
-        bool isIncoming = false;
+        int isIncoming = false;
         int inc;
         bool isDone = false;
+        int workingIndex = 0;
+        //While not done
         while(!isDone){
+            //Check for incoming messsages
             MPI_Iprobe(0, MPI_ANY_TAG, MCW, &isIncoming, &status);
+            //If incoming messages, recieve and process them
             if(isIncoming){
-                switch(status.MPI_TAG){
-                    case TAG_POISON:    //Recieve poison pill
-                        MPI_Recv(&inc, 1, MPI_INT, 0, TAG_POISON, MCW, MPI_STATUS_IGNORE);
-                        isDone = true;
-                        break;
-                    case TAG_QUANTITY:  //Recieve new puzzles
-                        int quantity;
-                        std::vector<int> data (N*N);
-                        MPI_Recv(&quantity, 1, MPI_INT, 0, TAG_QUANTITY, MCW, MPI_STATUS_IGNORE);
-                        for(int i = 0; i < quantity; ++i){
-                            MPI_Recv(data.data(), data.size(), MPI_INT, 0, TAG_PUZZLE, MCW, MPI_STATUS_IGNORE);
-                            queue.push_back(data);
-                        }
-                        break;
-                    default:
-                        break;
+                if(status.MPI_TAG == TAG_POISON){    //Recieve poison pill
+                    MPI_Recv(&inc, 1, MPI_INT, 0, TAG_POISON, MCW, MPI_STATUS_IGNORE);
+                    isDone = true;
+                } else 
+                if(status.MPI_TAG == TAG_QUANTITY){    //Recieve poison pill
+                    int quantity;
+                    std::vector<int> data (N*N);
+                    MPI_Recv(&quantity, 1, MPI_INT, 0, TAG_QUANTITY, MCW, MPI_STATUS_IGNORE);
+                    for(int i = 0; i < quantity; ++i){
+                        MPI_Recv(data.data(), data.size(), MPI_INT, 0, TAG_PUZZLE, MCW, MPI_STATUS_IGNORE);
+                        queue.push_back(data);
+                    }
                 }
             }
+            //Reset incoming messages
+            isIncoming = false;
             if(!isDone){
-                //Attempt to solve a puzzle, or request more
+                //Attempt to solve a puzzle
+                
+                
+                ++workingIndex;
+                //Request more if necessary
+                if(workingIndex == queue.size()){
+                    queue.clear();
+                }
             }
         }
+        /*
         
         /*
         MPI_Recv(puzzle.data(), puzzle.size(), MPI_INT, MPI_ANY_SOURCE, 0, MCW, MPI_STATUS_IGNORE);
