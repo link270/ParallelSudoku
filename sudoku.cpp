@@ -19,6 +19,7 @@ int getRow(int puzzleIndex);
 bool isValid(std::vector<int> puzzle);
 void printPuzzle(std::vector<int> puzzle);
 void solvePuzzle(std::vector<int>& puzzle);
+void generateQueue(std::vector<std::vector<int>> &queue, std::vector<int> puzzle);
 
 void fillBox(std::vector<int>& puzzle, int boxNum){
     std::vector<int> values;
@@ -40,7 +41,7 @@ void fillBox(std::vector<int>& puzzle, int boxNum){
 }
 
 // StartingNum must be 17 or higher to get a unique solution
-std::vector<int> generatePuzzle(bool basic, int startingNum){
+std::vector<int> generatePuzzle(bool basic, int startingNum = 15){
     std::vector<int> puzzle(N*N, -1);
     if(basic){
         bool useEasy = true;
@@ -60,6 +61,9 @@ std::vector<int> generatePuzzle(bool basic, int startingNum){
             // ||1|6|*||4|*|7||8|9|*||
             // ||5|*|*||*|*|2||4|*|7||
             //  =====================
+            //  2: 2,4,5
+            //  3: 2,5,
+            //  4: 4,6,
             puzzle[0] = 3;
             puzzle[5] = 9;
             puzzle[6] = 1;
@@ -191,7 +195,7 @@ bool isValid(std::vector<int> puzzle){
         }
         
         //Values in column are found by adding/subtracting N
-        for(int j = i + N; j != i; j=(j+N) % ( N*N )){
+        for(int j = (i + N) % (N*N); j != i; j=(j+N) % ( N*N )){
             if(puzzle[j] == -1)
                 continue;
             if(puzzle[i] == puzzle[j]){
@@ -297,6 +301,95 @@ void solvePuzzle(std::vector<int>& puzzle){
     
 }
 
+bool whyValid(std::vector<int> puzzle){
+    //iterate over all values
+    for(int i = 0; i < N*N; ++i){
+        //cell not filled, move onto the next one
+        if(puzzle[i] == -1)
+            continue;
+        //Row is all indices in [Nx(i/3), +N]
+        //Values in row are found by adding 1, modulus N, then adding to get back to the correct row if necessary
+        int row = getRow(i);
+        for(int j = (i+1) % N + (N*row); j != i; j = ((++j) % N) + (N*row)){
+            if(puzzle[j] == -1)
+                continue;
+            if(puzzle[i] == puzzle[j]){
+                return false;
+            }
+        }
+        
+        //Values in column are found by adding/subtracting N
+        for(int j = (i + N) % (N*N); j != i; j=(j+N) % ( N*N )){
+            if(puzzle[j] == -1)
+                continue;
+            if(puzzle[i] == puzzle[j]){
+                    std::cout << i << " was " << j << std::endl;
+                    std::cout << puzzle[i] << " : " << puzzle[j] << std::endl;
+                    printPuzzle(puzzle);
+                return false;
+            }
+        }
+        
+        //Values in box are found by finding the minimum and maxiumum possible index that could share a box, and iterating from there.
+        int currBox = getBox(i);
+        int start = i - (N*box) - box;
+        start = (start < 0) ? 0 : start;
+        int end = i + (N*box) + box;
+        end = (end < N*N) ? end : N*N;
+        for(int j = start; j < end; ++j){
+            int jBox = getBox(j);
+            if(j != i && puzzle[j] != -1 && jBox == currBox){
+                if(puzzle[i] == puzzle[j]){
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+void generateQueue(std::vector<std::vector<int>> &queue, std::vector<int> puzzle){
+    queue.push_back(puzzle);
+    std::vector<int> currPuzzle;
+    int start = 0;
+    int loops = 0;
+    int currIndex = start;
+    while(puzzle[currIndex] != -1)
+        ++currIndex;
+    while(loops < 3 || (queue.size() < 100 && currIndex < N*N)){
+        start = currIndex;
+        int added = queue.size();
+        for (int k = 0; k < added; ++k){
+            //std::cout << " --- " << std::endl;
+            currPuzzle = queue[0];
+            queue.erase(queue.begin());
+            //std::cout << "Popped " << std::endl;
+            //printPuzzle(currPuzzle);
+
+            if(k == 0){
+            }
+            for(int i = 1; i <= N; ++i){
+                currPuzzle[currIndex] = i;
+                if(isValid(currPuzzle)){
+                    queue.push_back(currPuzzle);
+                    std::cout << "Added " << i << " at " << currIndex << std::endl;
+                    //if(i == 6) printPuzzle(currPuzzle);
+                }
+            }
+        }
+        while(queue.back()[currIndex] != -1){
+            ++currIndex;
+        }
+        ++loops;
+    }
+    std::cout << "Done! " << queue.size() << std::endl;
+    /*
+    for(int i = 0; i < queue.size(); ++i){
+        printPuzzle(queue[i]);
+        std::cout << std::endl;
+    }
+    */
+}
+
 int main(int argc, char **argv){
     int rank, size, data;
     std::vector<int> puzzle, puzzle2;
@@ -307,21 +400,58 @@ int main(int argc, char **argv){
     MPI_Comm_size(MCW, &size); 
     srand(rank+time(0));
 
+    //MPI_Send(&rank, 1, MPI_INT, (rank+1)%size, 0, MCW);
+    //MPI_Recv(&data, 1, MPI_INT, MPI_ANY_SOURCE, 0, MCW, MPI_STATUS_IGNORE);
+
     if(rank==0){
-        // puzzle = generatePuzzle(true);
-        // printPuzzle(puzzle);
+        std::vector<std::vector<int>> queue;
+        puzzle = generatePuzzle(false, 17);
+        generateQueue(queue, puzzle);
+        //solvePuzzle(puzzle);
+        int currIndex = 0;
+        int quantity = 0;
+        int remaining = queue.size();
+        for(int i = 1; i < size && remaining > 0; ++i){
+            while (quantity < 4 && remaining > 0){
+                ++quantity
+                --remaining;
+            for (int j = 0; j < quantity; ++j){
+                MPI_Send(queue[currIndex+j].data(), queue[j].size(), MPI_INT, i, 0, MCW);
+            }
+            currIndex += quantity;
+        }
+        
 
-        // if(!isValid(puzzle)){
-        //     printf("Invalid puzzle\n");
-        // } else printf("Seems valid\n");
-        // solvePuzzle(puzzle);
 
+        //std::cout << queue.size() << std::endl;
+
+        /*
+        puzzle = generatePuzzle(true);
+        printPuzzle(puzzle);
+
+        if(!isValid(puzzle)){
+            printf("Invalid puzzle\n");
+        } else printf("Seems valid\n");
+        //solvePuzzle(puzzle);
+
+        MPI_Send(puzzle.data(), puzzle.size(), MPI_INT, 1, 0, MCW);
+        std::cout << "Communication complete" << std::endl;
+        /*
         puzzle2 = generatePuzzle(false, 17);
         std::cout<<"Randomly generated puzzle:"<<std::endl;
         printPuzzle(puzzle2);
         std::cout<<"Puzzle after being solved:"<< std::endl;
         solvePuzzle(puzzle2);
+        */
+    } else {
+        puzzle.resize(N*N);
+        MPI_Recv(puzzle.data(), puzzle.size(), MPI_INT, MPI_ANY_SOURCE, 0, MCW, MPI_STATUS_IGNORE);
+        std::cout << std::endl << std::endl;
+        std::cout << "Rank 1: " << std::endl;
+        printPuzzle(puzzle);
+        std::cout << "Communication complete" << std::endl;
     }
+
 
     MPI_Finalize();
 
