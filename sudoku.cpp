@@ -403,6 +403,13 @@ int main(int argc, char **argv){
     //MPI_Send(&rank, 1, MPI_INT, (rank+1)%size, 0, MCW);
     //MPI_Recv(&data, 1, MPI_INT, MPI_ANY_SOURCE, 0, MCW, MPI_STATUS_IGNORE);
 
+    int TAG_PUZZLE = 0;
+    int TAG_QUANTITY = 1;
+    int TAG_MORE = 2;
+    int TAG_SOLVED = 3;
+    int TAG_POISON = 4;
+
+
     if(rank==0){
         std::vector<std::vector<int>> queue;
         puzzle = generatePuzzle(false, 17);
@@ -415,8 +422,10 @@ int main(int argc, char **argv){
             while (quantity < 4 && remaining > 0){
                 ++quantity
                 --remaining;
+            }
+            MPI_Send(&quantity, 1, MPI_INT, i, TAG_QUANTITY, MCW);
             for (int j = 0; j < quantity; ++j){
-                MPI_Send(queue[currIndex+j].data(), queue[j].size(), MPI_INT, i, 0, MCW);
+                MPI_Send(queue[currIndex+j].data(), queue[j].size(), MPI_INT, i, TAG_PUZZLE, MCW);
             }
             currIndex += quantity;
         }
@@ -444,12 +453,24 @@ int main(int argc, char **argv){
         solvePuzzle(puzzle2);
         */
     } else {
-        puzzle.resize(N*N);
+        int isIncoming = false;
+        MPI_Iprobe(0, TAG_POISON, MCW, &isIncoming, MPI_ANY_STATUS);
+        std::vector<std::vector<int>> queue;
+        int quantity;
+        std::vector<int> data (N*N);
+        MPI_Recv(&quantity, 1, MPI_INT, 0, TAG_QUANTITY, MCW, MPI_STATUS_IGNORE);
+        for(int i = 0; i < quantity; ++i){
+            MPI_Recv(data.data(), data.size(), MPI_INT, 0, TAG_PUZZLE, MCW, MPI_STATUS_IGNORE);
+            queue.push_back(data);
+        }
+        
+        /*
         MPI_Recv(puzzle.data(), puzzle.size(), MPI_INT, MPI_ANY_SOURCE, 0, MCW, MPI_STATUS_IGNORE);
         std::cout << std::endl << std::endl;
         std::cout << "Rank 1: " << std::endl;
         printPuzzle(puzzle);
         std::cout << "Communication complete" << std::endl;
+        */
     }
 
 
