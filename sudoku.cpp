@@ -8,11 +8,11 @@
 
 #define MCW MPI_COMM_WORLD
 
-#define N 16
-#define box 4
+#define N 9
+#define box 3
 
 void fillBox(std::vector<int>& puzzle);
-std::vector<int> generatePuzzle(bool basic);
+std::vector<int> generatePuzzle(bool basic, int startingNum);
 int getBox(int puzzleIndex);
 int getColumn(int puzzleIndex);
 int getRow(int puzzleIndex);
@@ -39,11 +39,11 @@ void fillBox(std::vector<int>& puzzle, int boxNum){
     }
 }
 
-std::vector<int> generatePuzzle(bool basic){
+// StartingNum must be 17 or higher to get a unique solution
+std::vector<int> generatePuzzle(bool basic, int startingNum){
     std::vector<int> puzzle(N*N, -1);
-    srand (time(NULL));
     if(basic){
-        bool useEasy = false;
+        bool useEasy = true;
         if(useEasy) {
             // This isn't super elegant, but we can use it for the time being
             // to have a basic puzzle to test for consistancy, instead of random ones each time.
@@ -141,10 +141,13 @@ std::vector<int> generatePuzzle(bool basic){
         }
 
         solvePuzzle(puzzle);
-        int removeAmount = rand() % 27+17;
+        int removeAmount = 81-startingNum;
         while(removeAmount>0){
             int removeNum= rand() % 80;
-            if(puzzle[removeNum]>0)
+            if(puzzle[removeNum]>0){
+                puzzle[removeNum] = -1;
+                removeAmount--;
+            }
         }
     }
 
@@ -228,7 +231,7 @@ void printPuzzle(std::vector<int> puzzle){
     int w = getWidth(N);
     int rowLength = N*2+box+(N-9);
 
-    bool overNine = (N-9);
+    bool overNine = (w-1);
     
     std::cout<<" "<<std::string(rowLength, '=')<<std::endl;
     for(int i=0;i<puzzle.size();){
@@ -313,8 +316,11 @@ int main(int argc, char **argv){
         // } else printf("Seems valid\n");
         // solvePuzzle(puzzle);
 
-        puzzle2 = generatePuzzle(false);
+        puzzle2 = generatePuzzle(false, 17);
+        std::cout<<"Randomly generated puzzle:"<<std::endl;
         printPuzzle(puzzle2);
+        std::cout<<"Puzzle after being solved:"<< std::endl;
+        solvePuzzle(puzzle2);
     }
 
     MPI_Finalize();
