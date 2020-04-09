@@ -453,15 +453,36 @@ int main(int argc, char **argv){
         solvePuzzle(puzzle2);
         */
     } else {
-        int isIncoming = false;
-        MPI_Iprobe(0, TAG_POISON, MCW, &isIncoming, MPI_ANY_STATUS);
         std::vector<std::vector<int>> queue;
-        int quantity;
-        std::vector<int> data (N*N);
-        MPI_Recv(&quantity, 1, MPI_INT, 0, TAG_QUANTITY, MCW, MPI_STATUS_IGNORE);
-        for(int i = 0; i < quantity; ++i){
-            MPI_Recv(data.data(), data.size(), MPI_INT, 0, TAG_PUZZLE, MCW, MPI_STATUS_IGNORE);
-            queue.push_back(data);
+
+        MPI_Status status;
+        bool isIncoming = false;
+        int inc;
+        bool isDone = false;
+        while(!isDone){
+            MPI_Iprobe(0, MPI_ANY_TAG, MCW, &isIncoming, &status);
+            if(isIncoming){
+                switch(status.MPI_TAG){
+                    case TAG_POISON:    //Recieve poison pill
+                        MPI_Recv(&inc, 1, MPI_INT, 0, TAG_POISON, MCW, MPI_STATUS_IGNORE);
+                        isDone = true;
+                        break;
+                    case TAG_QUANTITY:  //Recieve new puzzles
+                        int quantity;
+                        std::vector<int> data (N*N);
+                        MPI_Recv(&quantity, 1, MPI_INT, 0, TAG_QUANTITY, MCW, MPI_STATUS_IGNORE);
+                        for(int i = 0; i < quantity; ++i){
+                            MPI_Recv(data.data(), data.size(), MPI_INT, 0, TAG_PUZZLE, MCW, MPI_STATUS_IGNORE);
+                            queue.push_back(data);
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+            if(!isDone){
+                //Attempt to solve a puzzle, or request more
+            }
         }
         
         /*
@@ -473,7 +494,7 @@ int main(int argc, char **argv){
         */
     }
 
-
+exit:
     MPI_Finalize();
 
     return 0;
