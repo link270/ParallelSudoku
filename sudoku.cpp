@@ -18,7 +18,7 @@ int getColumn(int puzzleIndex);
 int getRow(int puzzleIndex);
 bool isValid(std::vector<int> puzzle);
 void printPuzzle(std::vector<int> puzzle);
-void solvePuzzle(std::vector<int>& puzzle);
+bool solvePuzzle(std::vector<int>& puzzle);
 void generateQueue(std::vector<std::vector<int>> &queue, std::vector<int> puzzle);
 
 void fillBox(std::vector<int>& puzzle, int boxNum){
@@ -262,7 +262,7 @@ void printPuzzle(std::vector<int> puzzle){
 }
 
 //I'll give this a return value when it's closer to finished
-void solvePuzzle(std::vector<int>& puzzle){
+bool solvePuzzle(std::vector<int>& puzzle){
     std::vector<int> queue;
     int start = 0;
     while(puzzle[start] != -1){
@@ -305,6 +305,7 @@ void solvePuzzle(std::vector<int>& puzzle){
 
     printPuzzle(puzzle);
     std::cout << "Puzzle is " << ((isValid(puzzle)) ? "valid" : "invalid") << std::endl;
+    return isValid(puzzle);
     
 }
 
@@ -352,7 +353,7 @@ void generateQueue(std::vector<std::vector<int>> &queue, std::vector<int> puzzle
 }
 
 int main(int argc, char **argv){
-    int rank, size, data;
+    int rank, size;
     std::vector<int> puzzle, puzzle2;
     
 
@@ -372,6 +373,52 @@ int main(int argc, char **argv){
 
 
     if(rank==0){
+        bool isDone = false;
+
+        //Generate queue
+        std::vector<std::vector<int>> queue;
+        puzzle = generatePuzzle(false, 17);
+        generateQueue(queue, puzzle);
+        //Send initial puzzles
+        int currIndex = 0;
+        int quantity = 0;
+        int remaining = queue.size();
+        for(int i = 1; i < size && remaining > 0; ++i){
+            while (quantity < 4 && remaining > 0){
+                ++quantity
+                --remaining;
+            }
+            MPI_Send(&quantity, 1, MPI_INT, i, TAG_QUANTITY, MCW);
+            for (int j = 0; j < quantity; ++j){
+                MPI_Send(queue[currIndex+j].data(), queue[j].size(), MPI_INT, i, TAG_PUZZLE, MCW);
+            }
+            currIndex += quantity;
+        }
+
+        MPI_Status status;
+        std::vector<int> data (N*N);
+        int inc;
+        //While not done
+        while(!isDone){
+
+            //Check for incoming messages
+            MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MCW, &status);
+            //Recieve solved
+            if(status.MPI_TAG == TAG_SOLVED){
+                MPI_Recv(&data.data(), data.size(), MPI_INT, status.MPI_SOURCE, status.MPI_TAG, MCW, MPI_STATUS_IGNORE);
+                isDone = true;
+                printPuzzle(data);
+
+                //Send out poison pills
+
+            }
+            //Recieve request for more
+            else if (status.MPI_TAG == TAG_MORE){
+                MPI_Recv(&inc, 1, MPI_INT, status.MPI_SOURCE, status.MPI_TAG, MCW, MPI_STATUS_IGNORE);
+            }
+            
+        //End loop
+        }
         /*
         std::vector<std::vector<int>> queue;
         puzzle = generatePuzzle(false, 17);
@@ -417,55 +464,46 @@ int main(int argc, char **argv){
         */
     } else {
         std::vector<std::vector<int>> queue;
-
-        /*
-        MPI_Status status;
-        int isIncoming = false;
-        int inc;
-        bool isDone = false;
         int workingIndex = 0;
+        bool isDone = false;
+        int isIncoming = 0;
+        int inc = 0;
         //While not done
         while(!isDone){
-            //Check for incoming messsages
-            MPI_Iprobe(0, MPI_ANY_TAG, MCW, &isIncoming, &status);
-            //If incoming messages, recieve and process them
-            if(isIncoming){
-                if(status.MPI_TAG == TAG_POISON){    //Recieve poison pill
-                    MPI_Recv(&inc, 1, MPI_INT, 0, TAG_POISON, MCW, MPI_STATUS_IGNORE);
-                    isDone = true;
-                } else 
-                if(status.MPI_TAG == TAG_QUANTITY){    //Recieve poison pill
-                    int quantity;
-                    std::vector<int> data (N*N);
-                    MPI_Recv(&quantity, 1, MPI_INT, 0, TAG_QUANTITY, MCW, MPI_STATUS_IGNORE);
-                    for(int i = 0; i < quantity; ++i){
-                        MPI_Recv(data.data(), data.size(), MPI_INT, 0, TAG_PUZZLE, MCW, MPI_STATUS_IGNORE);
-                        queue.push_back(data);
-                    }
+            //Recieve new work if necessary
+            if(workingIndex == queue.size()){
+                workingIndex = 0;
+                queue.clear();
+                int quantity;
+                std::vector<int> data (N*N);
+                MPI_Recv(&quantity, 1, MPI_INT, 0, TAG_QUANTITY, MCW, MPI_STATUS_IGNORE);
+                for(int i = 0; i < quantity; ++i){
+                    MPI_Recv(data.data(), data.size(), MPI_INT, 0, TAG_PUZZLE, MCW, MPI_STATUS_IGNORE);
+                    queue.push_back(data);
                 }
             }
-            //Reset incoming messages
-            isIncoming = false;
-            if(!isDone){
-                //Attempt to solve a puzzle
-                
-                
-                ++workingIndex;
-                //Request more if necessary
-                if(workingIndex == queue.size()){
-                    queue.clear();
-                }
+
+            //Do work
+            isDone = solvePuzzle(queue[workingIndex]);
+            //Report done if necessary
+            if(isDone){
+                MPI_Send(&queue[workingIndex].data(), queue[workingIndex].data(), MPI_INT, 0, TAG_SOLVED, MCW);
             }
+            //Request more work if necessary
+             else if(workingIndex == queue.size()){
+                MPI_Send(&inc, 1, MPI_INT, 0, TAG_MORE, MCW);
+            }
+            ++workingIndex;
+
+            //Check for poison pill
+            MPI_Iprobe(0, TAG_POISON, MCW, &isIncoming, &status);
+            //Recieve poison pill if necessary
+            if(isIncoming || isDone){
+                MPI_Recv(&inc, 1, MPI_INT, 0, TAG_POISON, MCW, MPI_STATUS_IGNORE);
+                isDone = true;
+            }
+        //End loop
         }
-        /*
-        
-        /*
-        MPI_Recv(puzzle.data(), puzzle.size(), MPI_INT, MPI_ANY_SOURCE, 0, MCW, MPI_STATUS_IGNORE);
-        std::cout << std::endl << std::endl;
-        std::cout << "Rank 1: " << std::endl;
-        printPuzzle(puzzle);
-        std::cout << "Communication complete" << std::endl;
-        */
     }
 
 exit:
