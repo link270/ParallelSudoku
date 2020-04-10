@@ -408,6 +408,7 @@ int main(int argc, char **argv){
             //Check for incoming messages
             MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MCW, &status);
             std::cout << "Rank 0 recieving a message from " << status.MPI_SOURCE << std::endl;
+            std::cout << "Message is " << status.MPI_TAG << std::endl;
             //If a worker has found the solution
             if(status.MPI_TAG == TAG_SOLVED){
                 MPI_Recv(data.data(), data.size(), MPI_INT, status.MPI_SOURCE, status.MPI_TAG, MCW, MPI_STATUS_IGNORE);
@@ -421,23 +422,27 @@ int main(int argc, char **argv){
                         std::cout << "Sending poison pill to " << i << std::endl;
                         //Start nonblocking send to i
                         MPI_Request request;
+                        MPI_Status blocker;
                         MPI_Isend(&inc, 1, MPI_INT, i, TAG_POISON, MCW, &request);
+                        //MPI_Send(&inc, 1, MPI_INT, i, TAG_POISON, MCW);
                         //Check to make sure i isn't sending something already
                         int isPoisonComplete = 0;
                         isIncoming = 0;
-                        while(!isPoisonComplete && !isIncoming){
-                            MPI_Request_get_status(request, &isPoisonComplete, MPI_STATUS_IGNORE);
-                            MPI_Iprobe(1, MPI_ANY_TAG, MCW, &isIncoming, &status);
+                        while(!isIncoming && !isPoisonComplete){
+                            MPI_Test(&request, &isPoisonComplete, MPI_STATUS_IGNORE);
+                            MPI_Iprobe(1, MPI_ANY_TAG, MCW, &isIncoming, &blocker);
                             std::cout << "isPoisonComplete: " << isPoisonComplete << ", isIncoming: " << isIncoming << std::endl;
                         }
                         //If i is trying to send, recieve it
                         if(isIncoming){
                             std::cout << "Expecting message from " << i << std::endl;
+                            std::cout << "Message tag: " << blocker.MPI_TAG << std::endl;
                             //Handle incoming message
-                            if(status.MPI_TAG == TAG_MORE){
-                                MPI_Recv(&inc, 1, MPI_INT, status.MPI_SOURCE, status.MPI_TAG, MCW, MPI_STATUS_IGNORE);
+                            if(blocker.MPI_TAG == TAG_MORE){
+                                std::cout << "Recieved request for more" << std::endl;
+                                MPI_Recv(&inc, 1, MPI_INT, blocker.MPI_SOURCE, blocker.MPI_TAG, MCW, MPI_STATUS_IGNORE);
                             } else if (status.MPI_TAG == TAG_SOLVED){
-                                MPI_Recv(data.data(), data.size(), MPI_INT, status.MPI_SOURCE, status.MPI_TAG, MCW, MPI_STATUS_IGNORE);
+                                MPI_Recv(data.data(), data.size(), MPI_INT, blocker.MPI_SOURCE, status.MPI_TAG, MCW, MPI_STATUS_IGNORE);
                             }
                         }
                         //Wait for i to recieve the poison pill so we can continue
@@ -546,8 +551,8 @@ int main(int argc, char **argv){
             MPI_Iprobe(0, TAG_POISON, MCW, &isIncoming, &status);
             //Recieve poison pill if necessary
             if(isIncoming || isDone){
-                std::cout << "Rank " << rank << "recieved a poison pill" << std::endl;
                 MPI_Recv(&inc, 1, MPI_INT, 0, TAG_POISON, MCW, MPI_STATUS_IGNORE);
+                std::cout << "Rank " << rank << "recieved a poison pill" << std::endl;
                 isDone = true;
             }
         //End loop
