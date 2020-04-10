@@ -526,33 +526,46 @@ int main(int argc, char **argv){
         while(!isDone){
             //Recieve new work if necessary
             if(workingIndex == queue.size()){
+                MPI_Request pill, puzzles;
                 workingIndex = 0;
                 queue.clear();
                 int quantity;
                 std::vector<int> data (N*N);
                 std::cout << "Worker " << rank << " is waiting for more." << std::endl;
-                MPI_Recv(&quantity, 1, MPI_INT, 0, TAG_QUANTITY, MCW, MPI_STATUS_IGNORE);
-                std::cout << "Worker " << rank << " recieved more." << std::endl;
-                for(int i = 0; i < quantity; ++i){
-                    MPI_Recv(data.data(), data.size(), MPI_INT, 0, TAG_PUZZLE, MCW, MPI_STATUS_IGNORE);
-                    queue.push_back(data);
+                //MPI_Recv(&quantity, 1, MPI_INT, 0, TAG_QUANTITY, MCW, MPI_STATUS_IGNORE);
+                int puzzlesFlag = 0, pillFlag = 0;
+                MPI_Irecv(&quantity, 1, MPI_INT, 0, TAG_QUANTITY, MCW, &puzzles);
+                MPI_Irecv(&inc, 1, MPI_INT, 0, TAG_POISON, MCW, &pill);
+                while (!puzzlesFlag && !pillFlag){
+                    MPI_Test(&pill, &pillFlag, MPI_STATUS_IGNORE);
+                    MPI_Test(&puzzles, &puzzlesFlag, MPI_STATUS_IGNORE);
+                }
+                std::cout << "Rank " << rank << " broke out with: puzzles: " << puzzlesFlag << ", pill: " << pillFlag << std::endl;
+                if(puzzlesFlag){
+                    std::cout << "Worker " << rank << " recieved more." << std::endl;
+                    for(int i = 0; i < quantity; ++i){
+                        MPI_Recv(data.data(), data.size(), MPI_INT, 0, TAG_PUZZLE, MCW, MPI_STATUS_IGNORE);
+                        queue.push_back(data);
+                    }
                 }
             }
 
             //Do work
-            isDone = solvePuzzle(queue[workingIndex]);
-            std::cout << "Worker " << rank << " has processed a puzzle" << std::endl;
-            //Report done if necessary
-            if(isDone){
-                MPI_Send(queue[workingIndex].data(), queue[workingIndex].size(), MPI_INT, 0, TAG_SOLVED, MCW);
+            if(queue.size() > 0){
+                isDone = solvePuzzle(queue[workingIndex]);
+                std::cout << "Worker " << rank << " has processed a puzzle" << std::endl;
+                //Report done if necessary
+                if(isDone){
+                    MPI_Send(queue[workingIndex].data(), queue[workingIndex].size(), MPI_INT, 0, TAG_SOLVED, MCW);
+                }
+                //Request more work if necessary
+                else if(workingIndex+1 == queue.size()){
+                    std::cout << "Worker " << rank << " requesting more puzzles" << std::endl;
+                    MPI_Send(&inc, 1, MPI_INT, 0, TAG_MORE, MCW);
+                    std::cout << "Worker " << rank << " request complete" << std::endl;
+                }
+                ++workingIndex;
             }
-            //Request more work if necessary
-             else if(workingIndex+1 == queue.size()){
-                std::cout << "Worker " << rank << " requesting more puzzles" << std::endl;
-                MPI_Send(&inc, 1, MPI_INT, 0, TAG_MORE, MCW);
-                std::cout << "Worker " << rank << " request complete" << std::endl;
-            }
-            ++workingIndex;
 
             //Check for poison pill
             MPI_Iprobe(0, TAG_POISON, MCW, &isIncoming, &status);
