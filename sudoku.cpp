@@ -9,8 +9,8 @@
 
 #define MCW MPI_COMM_WORLD
 
-#define N 9
-#define box 3
+#define N 16
+#define box 4
 
 void fillBox(std::vector<int> &puzzle);
 std::vector<int> generatePuzzle(bool basic, int startingNum);
@@ -480,7 +480,7 @@ int main(int argc, char **argv)
                 MPI_Send(&quantity, 1, MPI_INT, i, TAG_QUANTITY, MCW);
                 for (int j = 0; j < quantity; ++j)
                 {
-                    MPI_Send(queue[currIndex + j].data(), queue[j].size(), MPI_INT, i, TAG_PUZZLE, MCW);
+                    MPI_Send(queue[currIndex + j].data(), N*N, MPI_INT, i, TAG_PUZZLE, MCW);
                 }
                 currIndex += quantity;
             }
