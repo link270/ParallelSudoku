@@ -9,11 +9,11 @@
 
 #define MCW MPI_COMM_WORLD
 
-#define N 9
-#define box 3
+#define N 16
+#define box 4
 
 void fillBox(std::vector<int> &puzzle);
-std::vector<int> generatePuzzle(bool basic, int startingNum);
+std::vector<int> generatePuzzle(bool basic);
 void generateQueue(std::vector<std::vector<int> > &queue, std::vector<int> puzzle);
 int getBox(int puzzleIndex);
 int getColumn(int puzzleIndex);
@@ -54,7 +54,7 @@ void fillBox(std::vector<int> &puzzle, int boxNum)
 }
 
 // StartingNum must be 17 or higher to get a unique solution
-std::vector<int> generatePuzzle(bool basic, int startingNum = 15)
+std::vector<int> generatePuzzle(bool basic)
 {
     std::vector<int> puzzle(N * N, -1);
     if (basic)
@@ -165,10 +165,15 @@ std::vector<int> generatePuzzle(bool basic, int startingNum = 15)
         }
 
         solvePuzzle(puzzle);
-        int removeAmount = 81 - startingNum;
+        std::random_device rd;
+        std::mt19937 eng(rd());
+        std::uniform_int_distribution<> distr(0, (N*N)-1);
+        int startingNum = 17;
+        if(N==16) startingNum = 60;
+        int removeAmount = N*N - startingNum;
         while (removeAmount > 0)
         {
-            int removeNum = rand() % 80;
+            int removeNum = distr(eng);
             if (puzzle[removeNum] > 0)
             {
                 puzzle[removeNum] = -1;
@@ -446,10 +451,10 @@ int main(int argc, char **argv)
     int workerQueueSize = 4;
     long long completionTime;
 
-    int timesToRun = 1;
+    int timesToRun = 10;
     std::vector<long long> allCompletionTimes;
 
-    if(argc > 1) timesToRun = (int)*argv[1]-'0';
+    if(argc > 1) timesToRun = strtol(argv[1], nullptr, 0);
 
     while (timesToRun > 0)
     {
@@ -460,7 +465,7 @@ int main(int argc, char **argv)
 
             //Generate queue
             std::vector<std::vector<int> > queue;
-            puzzle = generatePuzzle(false, 17);
+            puzzle = generatePuzzle(false);
             std::cout << "Puzzle to be solved: " << std::endl;
             printPuzzle(puzzle);
             std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
