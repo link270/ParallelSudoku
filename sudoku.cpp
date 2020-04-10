@@ -5,6 +5,7 @@
 #include <vector>
 #include <random>
 #include <iomanip>
+#include <chrono>
 
 #define MCW MPI_COMM_WORLD
 
@@ -19,7 +20,7 @@ int getRow(int puzzleIndex);
 bool isValid(std::vector<int> puzzle);
 void printPuzzle(std::vector<int> puzzle);
 bool solvePuzzle(std::vector<int>& puzzle);
-void generateQueue(std::vector<std::vector<int>> &queue, std::vector<int> puzzle);
+void generateQueue(std::vector<std::vector<int> > &queue, std::vector<int> puzzle);
 
 void fillBox(std::vector<int>& puzzle, int boxNum){
     std::vector<int> values;
@@ -308,7 +309,7 @@ bool solvePuzzle(std::vector<int>& puzzle){
     
 }
 
-void generateQueue(std::vector<std::vector<int>> &queue, std::vector<int> puzzle){
+void generateQueue(std::vector<std::vector<int> > &queue, std::vector<int> puzzle){
     queue.push_back(puzzle);
     std::vector<int> currPuzzle;
     int start = 0;
@@ -371,17 +372,19 @@ int main(int argc, char **argv){
     int TAG_POISON = 4;
 
     int workerQueueSize = 4;
-
+    long long completionTime;
 
     if(rank==0){
         bool isDone = false;
 
         //Generate queue
-        std::vector<std::vector<int>> queue;
-        puzzle = generatePuzzle(true, 17);
+        std::vector<std::vector<int> > queue;
+        puzzle = generatePuzzle(false, 17);
         std::cout << "Puzzle to be solved: " << std::endl;
         printPuzzle(puzzle);
+        auto startTime = std::chrono::steady_clock::now();
         generateQueue(queue, puzzle);
+        
         //Send initial puzzles
         int currIndex = 0;
         int quantity = 0;
@@ -413,6 +416,8 @@ int main(int argc, char **argv){
                 MPI_Recv(data.data(), data.size(), MPI_INT, status.MPI_SOURCE, status.MPI_TAG, MCW, MPI_STATUS_IGNORE);
                 isDone = true;
                 std::cout << "Worker " << status.MPI_SOURCE << " solved the puzzle: " << std::endl;
+                auto endTime = std::chrono::steady_clock::now();
+                completionTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
                 printPuzzle(data);
 
                 //Send out poison pills
@@ -511,7 +516,7 @@ int main(int argc, char **argv){
         solvePuzzle(puzzle2);
         */
     } else {
-        std::vector<std::vector<int>> queue;
+        std::vector<std::vector<int> > queue;
         int workingIndex = 0;
         bool isDone = false;
         int isIncoming = 0;
@@ -562,8 +567,12 @@ int main(int argc, char **argv){
         }
     }
 
+    MPI_Barrier(MCW);
+
     if(rank == 1) std::cout << "Rank 1 died" << std::endl;
 exit:
+
+if(rank == 0) std::cout<<"Time from puzzle creation to puzzle solution was " << completionTime << " microseconds.\n";
     MPI_Finalize();
 
     return 0;
