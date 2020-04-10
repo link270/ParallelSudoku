@@ -23,6 +23,13 @@ void printPuzzle(std::vector<int> puzzle);
 void report(std::vector<long long> allCompletionTimes);
 bool solvePuzzle(std::vector<int> &puzzle);
 
+const int TAG_PUZZLE = 0;
+const int TAG_QUANTITY = 1;
+const int TAG_MORE = 2;
+const int TAG_SOLVED = 3;
+const int TAG_POISON = 4;
+const int TAG_ACK = 5;
+
 void fillBox(std::vector<int> &puzzle, int boxNum)
 {
     std::vector<int> values;
@@ -368,6 +375,7 @@ void report(std::vector<long long> allCompletionTimes){
 bool solvePuzzle(std::vector<int> &puzzle)
 {
     std::vector<int> queue;
+    int isIncoming = false;
     int start = 0;
     while (puzzle[start] != -1)
     {
@@ -400,6 +408,10 @@ bool solvePuzzle(std::vector<int> &puzzle)
                     else
                         break;
                 }
+                MPI_Iprobe(0, TAG_POISON, MCW, &isIncoming, MPI_STATUS_IGNORE);
+                if(isIncoming){
+                    return false;
+                }
             }
             else
             {
@@ -430,12 +442,6 @@ int main(int argc, char **argv)
     MPI_Comm_size(MCW, &size);
     srand(rank + time(0));
 
-    int TAG_PUZZLE = 0;
-    int TAG_QUANTITY = 1;
-    int TAG_MORE = 2;
-    int TAG_SOLVED = 3;
-    int TAG_POISON = 4;
-    int TAG_ACK = 5;
 
     int workerQueueSize = 4;
     long long completionTime;
@@ -606,7 +612,7 @@ int main(int argc, char **argv)
                 if (queue.size() > 0)
                 {
                     isDone = solvePuzzle(queue[workingIndex]);
-                    std::cout << "Worker " << rank << " has processed a puzzle" << std::endl;
+                    //std::cout << "Worker " << rank << " has processed a puzzle" << std::endl;
                     //Report done if necessary
                     if (isDone)
                     {
@@ -615,7 +621,7 @@ int main(int argc, char **argv)
                     //Request more work if necessary
                     else if (workingIndex + 1 == queue.size())
                     {
-                        std::cout << "Worker " << rank << " requesting more puzzles" << std::endl;
+                        //std::cout << "Worker " << rank << " requesting more puzzles" << std::endl;
                         MPI_Send(&inc, 1, MPI_INT, 0, TAG_MORE, MCW);
                     }
                     ++workingIndex;
@@ -626,8 +632,10 @@ int main(int argc, char **argv)
                 //Recieve poison pill if necessary
                 if (isIncoming || isDone)
                 {
+                    std::cout << "Starting recieve" << std::endl;
                     MPI_Recv(&inc, 1, MPI_INT, 0, TAG_POISON, MCW, MPI_STATUS_IGNORE);
-                    std::cout << "Rank " << rank << " recieved a poison pill" << std::endl;
+                    std::cout << "Ending recieve" << std::endl;
+                    //std::cout << "Rank " << rank << " recieved a poison pill" << std::endl;
                     isDone = true;
                 }
                 //End loop
