@@ -632,9 +632,9 @@ int main(int argc, char **argv)
                 //Recieve poison pill if necessary
                 if (isIncoming || isDone)
                 {
-                    std::cout << "Starting recieve" << std::endl;
+                    //std::cout << "Starting recieve" << std::endl;
                     MPI_Recv(&inc, 1, MPI_INT, 0, TAG_POISON, MCW, MPI_STATUS_IGNORE);
-                    std::cout << "Ending recieve" << std::endl;
+                    //std::cout << "Ending recieve" << std::endl;
                     //std::cout << "Rank " << rank << " recieved a poison pill" << std::endl;
                     isDone = true;
                 }
