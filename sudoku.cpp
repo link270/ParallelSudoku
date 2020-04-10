@@ -14,13 +14,14 @@
 
 void fillBox(std::vector<int> &puzzle);
 std::vector<int> generatePuzzle(bool basic, int startingNum);
+void generateQueue(std::vector<std::vector<int> > &queue, std::vector<int> puzzle);
 int getBox(int puzzleIndex);
 int getColumn(int puzzleIndex);
 int getRow(int puzzleIndex);
 bool isValid(std::vector<int> puzzle);
 void printPuzzle(std::vector<int> puzzle);
+void report(std::vector<long long> allCompletionTimes);
 bool solvePuzzle(std::vector<int> &puzzle);
-void generateQueue(std::vector<std::vector<int> > &queue, std::vector<int> puzzle);
 
 void fillBox(std::vector<int> &puzzle, int boxNum)
 {
@@ -172,6 +173,55 @@ std::vector<int> generatePuzzle(bool basic, int startingNum = 15)
     return puzzle;
 }
 
+void generateQueue(std::vector<std::vector<int> > &queue, std::vector<int> puzzle)
+{
+    queue.push_back(puzzle);
+    std::vector<int> currPuzzle;
+    int start = 0;
+    int loops = 0;
+    int currIndex = start;
+    while (puzzle[currIndex] != -1)
+        ++currIndex;
+    while (loops < 3 || (queue.size() < 100 && currIndex < N * N))
+    {
+        start = currIndex;
+        int added = queue.size();
+        for (int k = 0; k < added; ++k)
+        {
+            //std::cout << " --- " << std::endl;
+            currPuzzle = queue[0];
+            queue.erase(queue.begin());
+            //std::cout << "Popped " << std::endl;
+            //printPuzzle(currPuzzle);
+
+            if (k == 0)
+            {
+            }
+            for (int i = 1; i <= N; ++i)
+            {
+                currPuzzle[currIndex] = i;
+                if (isValid(currPuzzle))
+                {
+                    queue.push_back(currPuzzle);
+                    //std::cout << "Added " << i << " at " << currIndex << std::endl;
+                    //if(i == 6) printPuzzle(currPuzzle);
+                }
+            }
+        }
+        while (queue.back()[currIndex] != -1)
+        {
+            ++currIndex;
+        }
+        ++loops;
+    }
+    /*
+    for(int i = 0; i < queue.size(); ++i){
+        printPuzzle(queue[i]);
+        std::cout << std::endl;
+    }
+    */
+}
+
 // Gives the box number of the puzzle index.
 // Box numbers increase from
 int getBox(int puzzleIndex)
@@ -298,6 +348,22 @@ void printPuzzle(std::vector<int> puzzle)
     }
 }
 
+void report(std::vector<long long> allCompletionTimes){
+    int totalTime = 0;
+    for (int i = 0; i < allCompletionTimes.size(); ++i)
+    {
+        totalTime += allCompletionTimes[i];
+        std::cout << "\nPuzzle number: " << i + 1 << " was solved in " << allCompletionTimes[i] << " microseconds.\n";
+    }
+
+    long long averageTime = totalTime / allCompletionTimes.size();
+    std::sort(allCompletionTimes.begin(), allCompletionTimes.end());
+    std::cout << "\nAll " << allCompletionTimes.size() << " puzzles were solved in a total time of " << totalTime << " microseconds.\n";
+    std::cout << "The longest puzzle took " << allCompletionTimes.back() << " microseconds to solve and the shortest taking ";
+    std::cout << allCompletionTimes[0] << " microseconds\n";
+    std::cout << "With an average time of " << averageTime << " microseconds accross all puzzles.\n";
+}
+
 //I'll give this a return value when it's closer to finished
 bool solvePuzzle(std::vector<int> &puzzle)
 {
@@ -352,57 +418,6 @@ bool solvePuzzle(std::vector<int> &puzzle)
         queue.push_back(curr);
     }
     return true;
-    //printPuzzle(puzzle);
-    //std::cout << "Puzzle is " << ((isValid(puzzle)) ? "valid" : "invalid") << std::endl;
-}
-
-void generateQueue(std::vector<std::vector<int> > &queue, std::vector<int> puzzle)
-{
-    queue.push_back(puzzle);
-    std::vector<int> currPuzzle;
-    int start = 0;
-    int loops = 0;
-    int currIndex = start;
-    while (puzzle[currIndex] != -1)
-        ++currIndex;
-    while (loops < 3 || (queue.size() < 100 && currIndex < N * N))
-    {
-        start = currIndex;
-        int added = queue.size();
-        for (int k = 0; k < added; ++k)
-        {
-            //std::cout << " --- " << std::endl;
-            currPuzzle = queue[0];
-            queue.erase(queue.begin());
-            //std::cout << "Popped " << std::endl;
-            //printPuzzle(currPuzzle);
-
-            if (k == 0)
-            {
-            }
-            for (int i = 1; i <= N; ++i)
-            {
-                currPuzzle[currIndex] = i;
-                if (isValid(currPuzzle))
-                {
-                    queue.push_back(currPuzzle);
-                    //std::cout << "Added " << i << " at " << currIndex << std::endl;
-                    //if(i == 6) printPuzzle(currPuzzle);
-                }
-            }
-        }
-        while (queue.back()[currIndex] != -1)
-        {
-            ++currIndex;
-        }
-        ++loops;
-    }
-    /*
-    for(int i = 0; i < queue.size(); ++i){
-        printPuzzle(queue[i]);
-        std::cout << std::endl;
-    }
-    */
 }
 
 int main(int argc, char **argv)
@@ -415,7 +430,6 @@ int main(int argc, char **argv)
     MPI_Comm_size(MCW, &size);
     srand(rank + time(0));
 
-
     int TAG_PUZZLE = 0;
     int TAG_QUANTITY = 1;
     int TAG_MORE = 2;
@@ -426,13 +440,14 @@ int main(int argc, char **argv)
     int workerQueueSize = 4;
     long long completionTime;
 
-    int timesToRun = 10;
+    int timesToRun = 1;
     std::vector<long long> allCompletionTimes;
+
+    if(argc > 1) timesToRun = (int)*argv[1]-'0';
 
     while (timesToRun > 0)
     {
         MPI_Barrier(MCW);
-        std::cout<<rank<<" timestorun "<<timesToRun<<std::endl;
         if (rank == 0)
         {
             bool isDone = false;
@@ -442,7 +457,7 @@ int main(int argc, char **argv)
             puzzle = generatePuzzle(false, 17);
             std::cout << "Puzzle to be solved: " << std::endl;
             printPuzzle(puzzle);
-            auto startTime = std::chrono::steady_clock::now();
+            std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
             generateQueue(queue, puzzle);
 
             //Send initial puzzles
@@ -481,7 +496,7 @@ int main(int argc, char **argv)
                     MPI_Recv(data.data(), data.size(), MPI_INT, status.MPI_SOURCE, status.MPI_TAG, MCW, MPI_STATUS_IGNORE);
                     isDone = true;
                     std::cout << "Worker " << status.MPI_SOURCE << " solved the puzzle: " << std::endl;
-                    auto endTime = std::chrono::steady_clock::now();
+                    std::chrono::steady_clock::time_point endTime = std::chrono::steady_clock::now();
                     completionTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
                     printPuzzle(data);
 
@@ -555,7 +570,6 @@ int main(int argc, char **argv)
             //While not done
             while (!isDone)
             {
-                std::cout<<rank<<"InLoop\n";
                 //Recieve new work if necessary
                 if (workingIndex == queue.size())
                 {
@@ -581,7 +595,9 @@ int main(int argc, char **argv)
                             queue.push_back(data);
                         }
                         MPI_Cancel(&pill);
-                    } else {
+                    }
+                    else
+                    {
                         MPI_Cancel(&puzzles);
                     }
                 }
@@ -615,13 +631,11 @@ int main(int argc, char **argv)
                     isDone = true;
                 }
                 //End loop
-                
             }
             MPI_Send(&inc, 1, MPI_INT, 0, TAG_ACK, MCW);
         }
-        std::cout << "****Rank " << rank << " is dead" << std::endl;
+        //std::cout << "****Rank " << rank << " is dead" << std::endl;
         MPI_Barrier(MCW);
-        std::cout << "Barrier" << std::endl;
         if (rank == 0)
         {
             std::cout << "Time from puzzle creation to puzzle solution was " << completionTime << " microseconds.\n";
@@ -630,12 +644,13 @@ int main(int argc, char **argv)
 
         timesToRun--;
 
-        int t=0, d=0;
+        int t = 0, d = 0;
         MPI_Status cleanup;
         MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MCW, &t, &cleanup);
-        while(t){
+        while (t)
+        {
             MPI_Recv(&d, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MCW, &cleanup);
-            std::cout<<"Rank: "<<rank<<" recieved a leftover message from: "<<cleanup.MPI_SOURCE<<" Tag: "<<cleanup.MPI_TAG<<" Data: "<<d<<std::endl;
+            std::cout << "Rank: " << rank << " recieved a leftover message from: " << cleanup.MPI_SOURCE << " Tag: " << cleanup.MPI_TAG << " Data: " << d << std::endl;
             MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MCW, &t, &cleanup);
         }
     }
@@ -645,15 +660,7 @@ exit:
     MPI_Barrier(MCW);
     if (rank == 0)
     {
-        int totalTime = 0;
-        for (int i = 0; i < allCompletionTimes.size(); ++i)
-        {
-            totalTime += allCompletionTimes[i];
-            std::cout << "Puzzle number: " << i + 1 << " was solved in " << allCompletionTimes[i] << " microseconds.\n\n";
-        }
-
-        long long averageTime = totalTime / allCompletionTimes.size();
-        std::cout << "All " << allCompletionTimes.size() << " puzzles were solved in a total time of "<< totalTime <<" microseconds.\nWith an average time of " << averageTime << " microseconds.\n";
+        report(allCompletionTimes);
     }
 
     MPI_Finalize();
