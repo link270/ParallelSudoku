@@ -511,7 +511,6 @@ int main(int argc, char **argv)
                                 //std::cout << "isPoisonComplete: " << isPoisonComplete << ", isIncoming: " << isIncoming << std::endl;
                                 //std::cout << "isComplete: " << isIncoming << ", tag: " << blocker.MPI_TAG << std::endl;
                             }
-                            std::cout << i << std::endl;
                             //If i is trying to send, recieve it
                             if (isIncoming)
                             {
@@ -584,10 +583,8 @@ int main(int argc, char **argv)
                         MPI_Test(&pill, &pillFlag, MPI_STATUS_IGNORE);
                         MPI_Test(&puzzles, &puzzlesFlag, MPI_STATUS_IGNORE);
                     }
-                    std::cout << "Rank " << rank << " broke out with: puzzles: " << puzzlesFlag << ", pill: " << pillFlag << std::endl;
                     if (puzzlesFlag)
                     {
-                        std::cout << "Worker " << rank << " recieved more." << std::endl;
                         for (int i = 0; i < quantity; ++i)
                         {
                             MPI_Recv(data.data(), data.size(), MPI_INT, 0, TAG_PUZZLE, MCW, MPI_STATUS_IGNORE);
@@ -611,7 +608,6 @@ int main(int argc, char **argv)
                     {
                         std::cout << "Worker " << rank << " requesting more puzzles" << std::endl;
                         MPI_Send(&inc, 1, MPI_INT, 0, TAG_MORE, MCW);
-                        std::cout << "Worker " << rank << " request complete" << std::endl;
                     }
                     ++workingIndex;
                 }
@@ -621,13 +617,13 @@ int main(int argc, char **argv)
                 //Recieve poison pill if necessary
                 if (isIncoming || isDone)
                 {
-                    std::cout << "Rank " << rank << " sees a poison pill" << std::endl;
                     MPI_Recv(&inc, 1, MPI_INT, 0, TAG_POISON, MCW, MPI_STATUS_IGNORE);
                     std::cout << "Rank " << rank << " recieved a poison pill" << std::endl;
                     isDone = true;
                 }
                 //End loop
             }
+            MPI_Send(&inc, 1, MPI_INT, 0, TAG_ACK, MCW);
         }
         std::cout << "****Rank " << rank << " is dead" << std::endl;
         MPI_Barrier(MCW);
