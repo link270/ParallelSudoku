@@ -51,7 +51,7 @@ std::vector<int> generatePuzzle(bool basic, int startingNum = 15)
     std::vector<int> puzzle(N * N, -1);
     if (basic)
     {
-        bool useEasy = false;
+        bool useEasy = true;
         if (useEasy)
         {
             // This isn't super elegant, but we can use it for the time being
@@ -434,6 +434,7 @@ int main(int argc, char **argv)
 
     while (timesToRun > 0)
     {
+        MPI_Barrier(MCW);
         if (rank == 0)
         {
             bool isDone = false;
