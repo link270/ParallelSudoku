@@ -483,6 +483,7 @@ int main(int argc, char **argv)
                     MPI_Send(queue[currIndex + j].data(), N*N, MPI_INT, i, TAG_PUZZLE, MCW);
                 }
                 currIndex += quantity;
+                quantity = 0;
             }
 
             MPI_Status status;
