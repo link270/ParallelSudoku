@@ -448,7 +448,7 @@ int main(int argc, char **argv)
     srand(rank + time(0));
 
 
-    int workerQueueSize = 4;
+    int workerQueueSize = 10;
     long long completionTime;
 
     int timesToRun = 10;
@@ -504,7 +504,7 @@ int main(int argc, char **argv)
                 //If a worker has found the solution
                 if (status.MPI_TAG == TAG_SOLVED)
                 {
-                    MPI_Recv(data.data(), data.size(), MPI_INT, status.MPI_SOURCE, status.MPI_TAG, MCW, MPI_STATUS_IGNORE);
+                    MPI_Recv(data.data(), N*N, MPI_INT, status.MPI_SOURCE, status.MPI_TAG, MCW, MPI_STATUS_IGNORE);
                     isDone = true;
                     std::cout << "Worker " << status.MPI_SOURCE << " solved the puzzle: " << std::endl;
                     std::chrono::steady_clock::time_point endTime = std::chrono::steady_clock::now();
@@ -542,7 +542,7 @@ int main(int argc, char **argv)
                                 }
                                 else if (status.MPI_TAG == TAG_SOLVED)
                                 {
-                                    MPI_Recv(data.data(), data.size(), MPI_INT, blocker.MPI_SOURCE, status.MPI_TAG, MCW, MPI_STATUS_IGNORE);
+                                    MPI_Recv(data.data(), N*N, MPI_INT, blocker.MPI_SOURCE, status.MPI_TAG, MCW, MPI_STATUS_IGNORE);
                                 }
                             }
                             //Wait for i to recieve the poison pill so we can continue
@@ -602,7 +602,7 @@ int main(int argc, char **argv)
                     {
                         for (int i = 0; i < quantity; ++i)
                         {
-                            MPI_Recv(data.data(), data.size(), MPI_INT, 0, TAG_PUZZLE, MCW, MPI_STATUS_IGNORE);
+                            MPI_Recv(data.data(), N*N, MPI_INT, 0, TAG_PUZZLE, MCW, MPI_STATUS_IGNORE);
                             queue.push_back(data);
                         }
                         MPI_Cancel(&pill);
