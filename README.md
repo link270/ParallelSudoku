@@ -2,15 +2,10 @@
 
 ### Compile with MPI:
 
-`mXXxC\xX### Run:
+`mpic++ sudoku.cpp`
 
-`mpirun -n 4 ./a.out`
+### Run:
 
-[^1]: Where 4 is the number of processors your cpu has.u has.
-`mpirun -n 4 ./a.out`
+`mpirun -np 4 ./a.out`
 
-
-Where 4 is the number
-**
-
-**
+Where 4 is the number of processors your cpu has.u has.
