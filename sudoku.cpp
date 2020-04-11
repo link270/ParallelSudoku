@@ -59,7 +59,7 @@ std::vector<int> generatePuzzle(bool basic)
     std::vector<int> puzzle(N * N, -1);
     if (basic)
     {
-        bool useEasy = true;
+        bool useEasy = false;
         if (useEasy)
         {
             // This isn't super elegant, but we can use it for the time being
@@ -466,7 +466,7 @@ int main(int argc, char **argv)
 
             //Generate queue
             std::vector<std::vector<int> > queue;
-            puzzle = generatePuzzle(false);
+            puzzle = generatePuzzle(true);
             std::cout << "Puzzle to be solved: " << std::endl;
             printPuzzle(puzzle);
             std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
@@ -517,10 +517,11 @@ int main(int argc, char **argv)
                     for (int i = 1; i < size; ++i)
                     {
                         //std::cout << "Waiting on " << i << std::endl;
-                        MPI_Request poison;
                         MPI_Request ack;
+                        MPI_Request poison;
                         int wasAcked = false;
                         MPI_Irecv(&inc, 1, MPI_INT, i, TAG_ACK, MCW, &ack);
+                        std::vector<MPI_Request> pills;
                         do
                         {
                         MPI_Isend(&inc, 1, MPI_INT, i, TAG_POISON, MCW, &poison);
