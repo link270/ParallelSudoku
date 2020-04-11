@@ -9,8 +9,8 @@
 
 #define MCW MPI_COMM_WORLD
 
-#define N 16
-#define box 4
+#define N 9
+#define box 3
 
 void fillBox(std::vector<int> &puzzle);
 std::vector<int> generatePuzzle(bool basic);
@@ -461,6 +461,7 @@ int main(int argc, char **argv)
         MPI_Barrier(MCW);
         if (rank == 0)
         {
+            std::cout <<"Starting" << std::endl;
             bool isDone = false;
 
             //Generate queue
@@ -515,13 +516,14 @@ int main(int argc, char **argv)
                     //Send out poison pills
                     for (int i = 1; i < size; ++i)
                     {
-                        MPI_Request request;
+                        //std::cout << "Waiting on " << i << std::endl;
+                        MPI_Request poison;
                         MPI_Request ack;
                         int wasAcked = false;
                         MPI_Irecv(&inc, 1, MPI_INT, i, TAG_ACK, MCW, &ack);
-                        MPI_Isend(&inc, 1, MPI_INT, i, TAG_POISON, MCW, &request);
                         do
                         {
+                        MPI_Isend(&inc, 1, MPI_INT, i, TAG_POISON, MCW, &poison);
                             //Start nonblocking send to i
                             MPI_Status blocker;
                             //Check to make sure i isn't sending something already,
@@ -530,8 +532,12 @@ int main(int argc, char **argv)
                             isIncoming = 0;
                             while (!isIncoming && !isPoisonComplete)
                             {
-                                MPI_Test(&request, &isPoisonComplete, MPI_STATUS_IGNORE);
-                                MPI_Iprobe(i, MPI_ANY_TAG, MCW, &isIncoming, &blocker);
+                                MPI_Test(&poison, &isPoisonComplete, MPI_STATUS_IGNORE);
+                                MPI_Iprobe(i, TAG_MORE, MCW, &isIncoming, &blocker);
+                                if(!isIncoming){
+                                    MPI_Iprobe(i, TAG_SOLVED, MCW, &isIncoming, &blocker);
+                                }
+                                //std::cout << "Looping in " << i << std::endl;
                             }
                             //If i is trying to send, recieve it
                             if (isIncoming)
@@ -549,6 +555,7 @@ int main(int argc, char **argv)
                             //Wait for i to recieve the poison pill so we can continue
                             MPI_Test(&ack, &wasAcked, MPI_STATUS_IGNORE);
                         } while (!wasAcked);
+                        //std::cout << "No longer waiting on " << i << std::endl;
                         //MPI_Wait(&request, MPI_STATUS_IGNORE);
                     }
                 }
@@ -585,6 +592,7 @@ int main(int argc, char **argv)
                 //Recieve new work if necessary
                 if (workingIndex == queue.size())
                 {
+                    //std::cout << "Rank " << rank << " starting waiting" << std::endl;
                     MPI_Request pill, puzzles;
                     workingIndex = 0;
                     queue.clear();
@@ -612,6 +620,7 @@ int main(int argc, char **argv)
                     {
                         MPI_Cancel(&puzzles);
                     }
+                    //std::cout << "Rank " << rank << " finished waiting" << std::endl;
                 }
 
                 //Do work
@@ -664,7 +673,7 @@ int main(int argc, char **argv)
         while (t)
         {
             MPI_Recv(&d, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MCW, &cleanup);
-            std::cout << "Rank: " << rank << " recieved a leftover message from: " << cleanup.MPI_SOURCE << " Tag: " << cleanup.MPI_TAG << " Data: " << d << std::endl;
+            //std::cout << "Rank: " << rank << " recieved a leftover message from: " << cleanup.MPI_SOURCE << " Tag: " << cleanup.MPI_TAG << " Data: " << d << std::endl;
             MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MCW, &t, &cleanup);
         }
     }
