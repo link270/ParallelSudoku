@@ -77,9 +77,6 @@ std::vector<int> generatePuzzle(bool basic)
             // ||1|6|*||4|*|7||8|9|*||
             // ||5|*|*||*|*|2||4|*|7||
             //  =====================
-            //  2: 2,4,5
-            //  3: 2,5,
-            //  4: 4,6,
             puzzle[0] = 3;
             puzzle[5] = 9;
             puzzle[6] = 1;
@@ -200,11 +197,8 @@ void generateQueue(std::vector<std::vector<int> > &queue, std::vector<int> puzzl
         int added = queue.size();
         for (int k = 0; k < added; ++k)
         {
-            //std::cout << " --- " << std::endl;
             currPuzzle = queue[0];
             queue.erase(queue.begin());
-            //std::cout << "Popped " << std::endl;
-            //printPuzzle(currPuzzle);
 
             if (k == 0)
             {
@@ -215,8 +209,6 @@ void generateQueue(std::vector<std::vector<int> > &queue, std::vector<int> puzzl
                 if (isValid(currPuzzle))
                 {
                     queue.push_back(currPuzzle);
-                    //std::cout << "Added " << i << " at " << currIndex << std::endl;
-                    //if(i == 6) printPuzzle(currPuzzle);
                 }
             }
         }
@@ -226,12 +218,6 @@ void generateQueue(std::vector<std::vector<int> > &queue, std::vector<int> puzzl
         }
         ++loops;
     }
-    /*
-    for(int i = 0; i < queue.size(); ++i){
-        printPuzzle(queue[i]);
-        std::cout << std::endl;
-    }
-    */
 }
 
 // Gives the box number of the puzzle index.
@@ -396,10 +382,6 @@ bool solvePuzzle(std::vector<int> &puzzle)
             if (queue.size() == 0)
                 break;
             puzzle[queue.back()] = i;
-            //if(queue.back() == 62){
-            //printPuzzle(puzzle);
-            //std::cout << "Puzzle is " << ((isValid(puzzle)) ? "valid" : "invalid") << std::endl;
-            //}
             if (!isIndexValid(puzzle, queue.back()))
             {
                 ++i;
@@ -448,7 +430,7 @@ int main(int argc, char **argv)
     srand(rank + time(0));
 
 
-    int workerQueueSize = 10;
+    int workerQueueSize = 8;
     long long completionTime;
 
     int timesToRun = 10;
@@ -502,7 +484,7 @@ int main(int argc, char **argv)
 
                 //Check for incoming messages
                 MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MCW, &status);
-                //std::cout << "Rank 0 recieving a message from " << status.MPI_SOURCE  << " with tag " << status.MPI_TAG << std::endl;
+
                 //If a worker has found the solution
                 if (status.MPI_TAG == TAG_SOLVED)
                 {
@@ -538,7 +520,6 @@ int main(int argc, char **argv)
                                 if(!isIncoming){
                                     MPI_Iprobe(i, TAG_SOLVED, MCW, &isIncoming, &blocker);
                                 }
-                                //std::cout << "Looping in " << i << std::endl;
                             }
                             //If i is trying to send, recieve it
                             if (isIncoming)
@@ -556,8 +537,6 @@ int main(int argc, char **argv)
                             //Wait for i to recieve the poison pill so we can continue
                             MPI_Test(&ack, &wasAcked, MPI_STATUS_IGNORE);
                         } while (!wasAcked);
-                        //std::cout << "No longer waiting on " << i << std::endl;
-                        //MPI_Wait(&request, MPI_STATUS_IGNORE);
                     }
                 }
                 //If nobody has found a solution, if someone wants more work:
@@ -593,13 +572,11 @@ int main(int argc, char **argv)
                 //Recieve new work if necessary
                 if (workingIndex == queue.size())
                 {
-                    //std::cout << "Rank " << rank << " starting waiting" << std::endl;
                     MPI_Request pill, puzzles;
                     workingIndex = 0;
                     queue.clear();
                     int quantity;
                     std::vector<int> data(N * N);
-                    //MPI_Recv(&quantity, 1, MPI_INT, 0, TAG_QUANTITY, MCW, MPI_STATUS_IGNORE);
                     int puzzlesFlag = 0, pillFlag = 0;
                     MPI_Irecv(&quantity, 1, MPI_INT, 0, TAG_QUANTITY, MCW, &puzzles);
                     MPI_Irecv(&inc, 1, MPI_INT, 0, TAG_POISON, MCW, &pill);
@@ -621,14 +598,12 @@ int main(int argc, char **argv)
                     {
                         MPI_Cancel(&puzzles);
                     }
-                    //std::cout << "Rank " << rank << " finished waiting" << std::endl;
                 }
 
                 //Do work
                 if (queue.size() > 0)
                 {
                     isDone = solvePuzzle(queue[workingIndex]);
-                    //std::cout << "Worker " << rank << " has processed a puzzle" << std::endl;
                     //Report done if necessary
                     if (isDone)
                     {
@@ -637,7 +612,6 @@ int main(int argc, char **argv)
                     //Request more work if necessary
                     else if (workingIndex + 1 == queue.size())
                     {
-                        //std::cout << "Worker " << rank << " requesting more puzzles" << std::endl;
                         MPI_Send(&inc, 1, MPI_INT, 0, TAG_MORE, MCW);
                     }
                     ++workingIndex;
@@ -648,17 +622,13 @@ int main(int argc, char **argv)
                 //Recieve poison pill if necessary
                 if (isIncoming || isDone)
                 {
-                    //std::cout << "Starting recieve" << std::endl;
                     MPI_Recv(&inc, 1, MPI_INT, 0, TAG_POISON, MCW, MPI_STATUS_IGNORE);
-                    //std::cout << "Ending recieve" << std::endl;
-                    //std::cout << "Rank " << rank << " recieved a poison pill" << std::endl;
                     isDone = true;
                 }
                 //End loop
             }
             MPI_Send(&inc, 1, MPI_INT, 0, TAG_ACK, MCW);
         }
-        //std::cout << "****Rank " << rank << " is dead" << std::endl;
         MPI_Barrier(MCW);
         if (rank == 0)
         {
@@ -674,7 +644,6 @@ int main(int argc, char **argv)
         while (t)
         {
             MPI_Recv(&d, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MCW, &cleanup);
-            //std::cout << "Rank: " << rank << " recieved a leftover message from: " << cleanup.MPI_SOURCE << " Tag: " << cleanup.MPI_TAG << " Data: " << d << std::endl;
             MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MCW, &t, &cleanup);
         }
     }
